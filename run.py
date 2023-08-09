@@ -1,57 +1,42 @@
 # imports
 #import RPi.GPIO as GPIO # Import Raspberry Pi GPIO library
 #from RpiMotorLib import RpiMotorLib
-import curses
+from sshkeyboard import listen_keyboard
 
 
 
 # variables
-panpins = [8,10,12,16] # pin 1-4 on the stepper motor on pi
-tiltpins = [7,11,13,15]
-tiltlimitpin = 21
-panlimitpin = 19
+panpins = [14,15,18,23] # pin 1-4 on the stepper motor on pi
+tiltpins = [4,17,27,22]
+tiltlimitpin = 9
+panlimitpin = 10
 panpos = 0
 tiltpos = 0
 panlim = 11410
 tiltlim = 12190
 
-# get the curses screen window
-screen = curses.initscr()
-def draw(string,height):
-    screen.addstr(height,0,string)  # overwrite the old stuff with spaces
-    screen.clrtoeol()
-    screen.refresh()
-# turn off input echoing
-curses.noecho()
-
-# respond to keys immediately (don't wait for enter)
-curses.cbreak()
-
-# map arrow keys to special values
-screen.keypad(True)
-
 # functions
 def pan(steps,direction): #true is clockwise false is counterclockwise                                   
     #RpiMotorLib.BYJMotor("MyMotorOne", "28BYJ").motor_run(panpins,.001, steps, direction, False, "half", .05)
-    draw("pan is "+str(round((panpos/panlim)*180,1))+" degrees",1)
+    print("pan is "+str(round((panpos/panlim)*180,1))+" degrees")
 
 def tilt(steps,direction):
     #RpiMotorLib.BYJMotor("MyMotorOne", "28BYJ").motor_run(tiltpins,.001, steps, direction, False, "half", .05)
-    draw("tilt is "+str(round((tiltpos/tiltlim)*180,1))+" degrees",2)
+    print("tilt is "+str(round((tiltpos/tiltlim)*180,1))+" degrees")
 
 
 def checkpan(steps,direction):
     global panpos
     if direction:
         if panpos + steps > panlim:
-            draw("sorry, but that would push me past my limits. please try moving the other way",1)
+            print("sorry, but that would push me past my limits. please try moving the other way")
             return False
         else:
             panpos = panpos + steps
             return True
     else:
         if panpos - steps < 0:
-            draw("sorry, but that would push me past my limits. please try moving the other way",1)
+            print("sorry, but that would push me past my limits. please try moving the other way")
             return False
         else:
             panpos = panpos - steps
@@ -60,14 +45,14 @@ def checktilt(steps,direction):
     global tiltpos
     if direction:
         if tiltpos + steps > tiltlim:
-            draw("sorry, but that would push me past my limits. please try moving the other way",2)
+            print("sorry, but that would push me past my limits. please try moving the other way")
             return False
         else:
             tiltpos = tiltpos + steps
             return True
     else:
         if tiltpos - steps < 10:
-            draw("sorry, but that would push me past my limits. please try moving the other way",2)
+            print("sorry, but that would push me past my limits. please try moving the other way")
             return False
         else:
             tiltpos = tiltpos - steps
@@ -102,79 +87,46 @@ def init():
             tilt(1,True) 
 
 
-# # logs keystrokes assigns roles to them
-# def press(key):
-#     if key == "up":
-#         if checktilt(500,True):
-#             tilt(500,True)
+# logs keystrokes assigns roles to them
+def press(key):
+    if key == "up":
+        if checktilt(500,True):
+            tilt(500,True)
+    elif key == "down":
+        if checktilt(500,False):
+            tilt(500,False)
+        print("")
+    elif key == "left":
+        if checkpan(500,True):
+            pan(500,True)
+    elif key == "right":
+        if checkpan(500,False):
+            pan(500,False)
+    elif key == "w":
+        if checktilt(100,True):
+            tilt(100,True)
+    elif key == "s":
+        if checktilt(100,False):
+            tilt(100,False)
+    elif key == "a":
+        if checkpan(100,True):
+            pan(100,True)
+    elif key == "d":
+        if checkpan(100,False):
+            pan(100,False)
 
-#     elif key == "down":
-#         if checktilt(500,False):
-#             tilt(500,False)
- 
-#         print("")
-#     elif key == "left":
-#         if checkpan(500,True):
-#             pan(500,True)
-
-#     elif key == "right":
-#         if checkpan(500,False):
-#             pan(500,False)
-
-#     elif key == "w":
-#         if checktilt(100,True):
-#             tilt(100,True)
- 
-#     elif key == "s":
-#         if checktilt(100,False):
-#             tilt(100,False)
-
-#     elif key == "a":
-#         if checkpan(100,True):
-#             pan(100,True)
-
-#     elif key == "d":
-#         if checkpan(100,False):
-#             pan(100,False)
-
-# def end():
-#     if panpos < 5000:
-#         pan(5000-panpos,True)
-#     else:
-#         pan(panpos-5000,False)
+def end():
+    if panpos < 5000:
+        pan(5000-panpos,True)
+    else:
+        pan(panpos-5000,False)
         
 
 
 #code
 #init()
-
+listen_keyboard(on_press=press)
 #end()
 
-
-
-
-try:
-    while True:
-        char = screen.getch()
-        if char == ord('q'):
-            break
-        elif char == curses.KEY_RIGHT:
-           if checkpan(500,True):
-                pan(500,True)
-        elif char == curses.KEY_LEFT:
-             if checkpan(500,False):
-                pan(500,False)
-        elif char == curses.KEY_UP:
-            if checktilt(500,True):
-                tilt(500,True)
-        elif char == curses.KEY_DOWN:
-            if checktilt(500,False):
-                tilt(500,False)
-finally:
-    # shut down cleanly
-    curses.nocbreak()
-    screen.keypad(0)
-    curses.echo()
-    curses.endwin()
 
 
